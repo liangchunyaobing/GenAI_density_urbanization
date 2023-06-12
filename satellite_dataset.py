@@ -6,6 +6,8 @@ import pandas as pd
 import re
 from torch.utils.data import Dataset
 from itertools import compress
+from annotator.hed import HEDdetector
+from annotator.util import HWC3
 
 class MyDataset(Dataset):
     def __init__(self, image_dir, data_dir, demo=-1):
@@ -41,9 +43,22 @@ class MyDataset(Dataset):
 
         img_name = self.image_list[item]
         target = cv2.imread(img_name)[44:556, 44:556, :]
-        source = cv2.imread(img_name.replace('zoom17', 'zoom17_edge'))
+        # target = cv2.imread(img_name)[172:428, 172:428, :]
+        # source = cv2.imread(img_name.replace('zoom17', 'zoom17_edge'))[172:428, 172:428, :]
+
+        image_apply = HEDdetector()
+        source = image_apply(target)
+        source[source < 175] = 0
+        source = 255 - source
+        source = HWC3(source)
 
         prompt = self.demo[item]
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
 
         return dict(jpg=target, txt=prompt, hint=source)
 
@@ -108,5 +123,6 @@ class MyDataset(Dataset):
         demo_df['description'] = demo_df[[c+'_label' for c in columns]].agg(','.join, axis=1)
         demo_df['description'] = [re.sub(r'(,)\1+', r'\1',s) for s in demo_df['description']]
         demo_df['description'] = demo_df['description'].str[1:-1]
+        demo_df['description'] = demo_df['description'].apply(lambda x: f"satellite image of a {x} region")
 
         return demo_df, columns
