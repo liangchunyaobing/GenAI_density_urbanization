@@ -5,4 +5,4 @@
 This repository is forked from the original [ControlNet](https://github.com/lllyasviel/ControlNet).
 
 The descriptions can be accessed [here](https://drive.google.com/drive/folders/1tdgVxU8wpZe-i6l6SjkQrc186fBkf_0m?usp=sharing).
-The constraints and target images can be accessed by contacting the author.
+The target satellite and constraint images can be accessed [here](https://drive.google.com/drive/folders/1ZTwyMpBFyoAbLAsLvBFlOEwCL8-arAY0?usp=sharing) and [here](https://drive.google.com/drive/folders/1BGr1T4fKsvJ6DAbRG380Bl1ePx1WnVuX?usp=sharing).
