@@ -15,9 +15,13 @@ class DDIMSampler(object):
         self.schedule = schedule
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
-            if attr.device != torch.device("cuda"):
-                attr = attr.to(torch.device("cuda"))
+        #if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
+            attr = attr.to(torch.float32)
+            if attr.device != self.model.device:
+                attr = attr.to(self.model.device)
+            #if attr.device != torch.device("cuda"):
+            #    attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
@@ -32,20 +36,20 @@ class DDIMSampler(object):
         self.register_buffer('alphas_cumprod_prev', to_torch(self.model.alphas_cumprod_prev))
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod.cpu())))
-        self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu() - 1)))
+        self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod.cpu()).float()))
+        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod.cpu()).float()))
+        self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod.cpu()).float()))
+        self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu()).float()))
+        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu() - 1).float()))
 
         # ddim sampling parameters
         ddim_sigmas, ddim_alphas, ddim_alphas_prev = make_ddim_sampling_parameters(alphacums=alphas_cumprod.cpu(),
                                                                                    ddim_timesteps=self.ddim_timesteps,
-                                                                                   eta=ddim_eta,verbose=verbose)
-        self.register_buffer('ddim_sigmas', ddim_sigmas)
-        self.register_buffer('ddim_alphas', ddim_alphas)
-        self.register_buffer('ddim_alphas_prev', ddim_alphas_prev)
-        self.register_buffer('ddim_sqrt_one_minus_alphas', np.sqrt(1. - ddim_alphas))
+                                                                                   eta=ddim_eta, verbose=verbose)
+        self.register_buffer('ddim_sigmas', torch.tensor(ddim_sigmas, dtype=torch.float32))
+        self.register_buffer('ddim_alphas', torch.tensor(ddim_alphas, dtype=torch.float32))
+        self.register_buffer('ddim_alphas_prev', torch.tensor(ddim_alphas_prev, dtype=torch.float32))
+        self.register_buffer('ddim_sqrt_one_minus_alphas', torch.tensor(np.sqrt(1. - ddim_alphas), dtype=torch.float32))
         sigmas_for_original_sampling_steps = ddim_eta * torch.sqrt(
             (1 - self.alphas_cumprod_prev) / (1 - self.alphas_cumprod) * (
                         1 - self.alphas_cumprod / self.alphas_cumprod_prev))
@@ -225,10 +229,10 @@ class DDIMSampler(object):
         sqrt_one_minus_alphas = self.model.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
         sigmas = self.model.ddim_sigmas_for_original_num_steps if use_original_steps else self.ddim_sigmas
         # select parameters corresponding to the currently considered timestep
-        a_t = torch.full((b, 1, 1, 1), alphas[index], device=device)
-        a_prev = torch.full((b, 1, 1, 1), alphas_prev[index], device=device)
-        sigma_t = torch.full((b, 1, 1, 1), sigmas[index], device=device)
-        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
+        a_t = torch.full((b, 1, 1, 1), alphas[index], device=device, dtype=torch.float32)
+        a_prev = torch.full((b, 1, 1, 1), alphas_prev[index], device=device, dtype=torch.float32)
+        sigma_t = torch.full((b, 1, 1, 1), sigmas[index], device=device, dtype=torch.float32)
+        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index], device=device, dtype=torch.float32)
 
         # current prediction for x_0
         if self.model.parameterization != "v":
@@ -263,7 +267,7 @@ class DDIMSampler(object):
             alphas = self.alphas_cumprod_prev[:num_steps]
         else:
             alphas_next = self.ddim_alphas[:num_steps]
-            alphas = torch.tensor(self.ddim_alphas_prev[:num_steps])
+            alphas = torch.tensor(self.ddim_alphas_prev[:num_steps], dtype=torch.float32)
 
         x_next = x0
         intermediates = []
