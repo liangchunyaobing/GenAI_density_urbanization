@@ -26,7 +26,7 @@ Notes:
 - Training progress and model weights are saved under the ./models/ directory.
 
 ## 4. Validating Results
-Specify the epochs you want to test on:
+Specify the epochs you want to test on in results_view_density.py:
 ```bash
 train_No = 'density'
 ckpt_directory = f'./ckpts_s/checkpoints_{train_No}'
@@ -55,12 +55,13 @@ Update the description logic in satellite_tiles_density.py. For example:
 def compute_description(self, row):
   return f"Satellite Image of YourCity. Total built-up volume is {int(row['built_volume_total']/1000)} thousand m3. Non-residential built-up volume is {int(row['built_volume_nres']/1000)} thousand m3."
 ```
-### B. Customize Image Data
+### C. Customize Image Data
 Update the data loading paths in satellite_tiles_density.py. For example:
 ```bash
-if city == "Chicago":
-    hint_name = self.hint_dir + city + '_of_Stage_1_' + r + '_' + d + '/' + str(xtile) + '_' + str(ytile) + '_' + r + '_' + d + '.tif'
-    img_name =  self.image_dir + city + '_of_Stage_4_grid_' + r + '_' + d + '/' + str(xtile) + '_' + str(ytile) + '_' + r + '_' + d + '.jpg'
+def __getitem__(self, item):
+  ...
+  if city == "Chicago":
+      hint_name = self.hint_dir + city + '_of_Stage_1_' + r + '_' + d + '/' + str(xtile) + '_' + str(ytile) + '_' + r + '_' + d + '.tif'
+      img_name =  self.image_dir + city + '_of_Stage_4_grid_' + r + '_' + d + '/' + str(xtile) + '_' + str(ytile) + '_' + r + '_' + d + '.jpg'
 ```
-Notes:
-- When using your own dataset, the data paths and description definition in results_view_density.py should also be updated. 
+### D. For validation, customize dataset and prompt description in results_view_density.py.
